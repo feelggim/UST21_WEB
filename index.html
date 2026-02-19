@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INSIDE UST21 아카이빙 구축 계획안</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* 폴더 트리 스타일 */
+        .tree-item { cursor: pointer; user-select: none; transition: all 0.2s; }
+        .tree-item:hover { color: #2563eb; }
+        .nested { display: none; padding-left: 20px; border-left: 1px solid #e2e8f0; margin-left: 6px; }
+        .nested.active { display: block; animation: slideDown 0.3s ease-out; }
+        .folder-icon::before { content: "📁"; margin-right: 6px; }
+        .folder-open::before { content: "📂"; margin-right: 6px; }
+        .file-icon::before { content: "📄"; margin-right: 6px; color: #64748b; }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 차트 컨테이너 - 필수 스타일 */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+
+        /* 탭 활성화 스타일 */
+        .tab-btn.active {
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
+            font-weight: 700;
+        }
+
+        /* 목업 디바이스 스타일 */
+        .mockup-device {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+        .mockup-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .mockup-menu.open { transform: translateX(0); }
+    </style>
+    <!-- Chosen Palette: Slate (Background) + Blue (Primary) + White (Card) -->
+    <!-- Application Structure Plan: 
+         1. Header: Project Title & Metadata
+         2. Navigation Tabs: Overview, Architecture, UX Strategy, Workflow, Benefits
+         3. Dynamic Content Area: Switches based on tab selection
+         4. Interactive Elements: Folder Tree, Workflow Steps, Mockup Simulator
+         This structure allows stakeholders to jump between the 'Why', 'How', and 'What' of the proposal.
+    -->
+    <!-- Visualization & Content Choices:
+         - Overview: 3-Card Layout for core goals (Quick visual scan).
+         - Architecture: 
+             1. Bar Chart: Comparing Static vs. DB approach (Data justification).
+             2. Interactive HTML Tree: Demonstrating the folder structure (Technical proof).
+         - UX Strategy: Live interactive HTML mockup within a 'device frame' (Visual proof).
+         - Benefits: Radar Chart (Holistic value assessment).
+         - Workflow: Horizontal Process Step with dynamic description (Process clarity).
+         NO SVG/Mermaid used. All visuals are Canvas (Charts) or HTML/CSS (Diagrams).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Header Section -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-black">U</div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-900 leading-none">INSIDE UST21</h1>
+                        <p class="text-xs text-slate-500 font-medium">아카이빙 시스템 구축 계획안 : 마케팅 팀 박상은과장</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-sm text-slate-500">
+                    <span class="hidden md:inline">작성일: 2026. 02. 19</span>
+                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">승인 대기</span>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <nav class="flex gap-8 overflow-x-auto" id="main-nav">
+                <button onclick="switchTab('overview')" class="tab-btn active py-3 text-sm text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">1. 개요 및 목표</button>
+                <button onclick="switchTab('architecture')" class="tab-btn py-3 text-sm text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">2. 시스템 아키텍처</button>
+                <button onclick="switchTab('ux-strategy')" class="tab-btn py-3 text-sm text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">3. UI/UX 디자인</button>
+                <button onclick="switchTab('workflow')" class="tab-btn py-3 text-sm text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">4. 운용 프로세스</button>
+                <button onclick="switchTab('benefits')" class="tab-btn py-3 text-sm text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">5. 기대 효과</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow bg-slate-50 p-4 sm:p-8">
+        <div class="max-w-7xl mx-auto space-y-8" id="content-area">
+            <!-- Content will be injected here via JS -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-sm text-slate-500">© 2026 UST21. Internal Report.</p>
+            <button onclick="window.print()" class="text-sm font-bold text-blue-600 hover:underline">🖨️ 보고서 출력하기</button>
+        </div>
+    </footer>
+
+    <script>
+        // State Management
+        const state = {
+            currentTab: 'overview',
+            mockupMenuOpen: false
+        };
+
+        // Data Storage
+        const reportData = {
+            goals: [
+                { title: "자산의 영구 보존", desc: "휘발성 콘텐츠가 아닌, 회사의 역사를 증명하는 디지털 자산으로 축적", icon: "🏛️" },
+                { title: "사용자 경험 혁신", desc: "기존 게시판 탈피, 콘텐츠 몰입도를 높이는 'Immersive View' 도입", icon: "✨" },
+                { title: "운용 비용 최소화", desc: "개발자 유지보수가 불필요한 '폴더 기반 관리 시스템' 구축", icon: "💰" }
+            ],
+            workflow: [
+                { step: 1, title: "폴더 생성", desc: "서버에 당월 폴더 생성 (예: 2026_05)", time: "1 min" },
+                { step: 2, title: "파일 업로드", desc: "제작된 HTML 및 이미지 파일 업로드", time: "5 min" },
+                { step: 3, title: "링크 연결", desc: "메인 페이지(index.html)에 링크 한 줄 추가", time: "3 min" }
+            ]
+        };
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTab('overview');
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            state.currentTab = tabId;
+            
+            // Update Tab UI
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Render Content
+            renderTab(tabId);
+        }
+
+        // Content Rendering Logic
+        function renderTab(tabId) {
+            const container = document.getElementById('content-area');
+            container.innerHTML = ''; // Clear previous content
+
+            switch(tabId) {
+                case 'overview':
+                    renderOverview(container);
+                    break;
+                case 'architecture':
+                    renderArchitecture(container);
+                    break;
+                case 'ux-strategy':
+                    renderUXStrategy(container);
+                    break;
+                case 'workflow':
+                    renderWorkflow(container);
+                    break;
+                case 'benefits':
+                    renderBenefits(container);
+                    break;
+            }
+        }
+
+        // --- 1. Overview Section ---
+        function renderOverview(container) {
+            // Intro Paragraph
+            const intro = document.createElement('div');
+            intro.className = 'bg-white p-6 rounded-lg shadow-sm border border-slate-100 mb-8';
+            intro.innerHTML = `
+                <h2 class="text-lg font-bold text-slate-900 mb-2">프로젝트 개요</h2>
+                <p class="text-slate-600 leading-relaxed">
+                    본 계획안은 사내 웹진 'INSIDE UST21'의 체계적인 자산화(Archiving)를 목표로 합니다. 
+                    복잡한 데이터베이스 구축 없이, <strong class="text-blue-600">파일 기반의 정적 구조(Static File System)</strong>를 채택하여 
+                    운영 효율성을 극대화하고 서버 안정성을 확보하는 것이 핵심입니다.
+                </p>
+            `;
+            container.appendChild(intro);
+
+            // Goals Grid
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 md:grid-cols-3 gap-6';
+            
+            reportData.goals.forEach(goal => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-6 rounded-lg shadow-sm border-t-4 border-blue-500 hover:shadow-md transition-shadow';
+                card.innerHTML = `
+                    <div class="text-4xl mb-4">${goal.icon}</div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">${goal.title}</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">${goal.desc}</p>
+                `;
+                grid.appendChild(card);
+            });
+            container.appendChild(grid);
+        }
+
+        // --- 2. Architecture Section ---
+        function renderArchitecture(container) {
+            // Intro
+            const intro = document.createElement('div');
+            intro.innerHTML = `
+                <h2 class="text-2xl font-bold text-slate-900 mb-4">3. 시스템 아키텍처 (Static File System)</h2>
+                <p class="text-slate-600 mb-8">별도의 CMS나 DB 없이, 완성된 HTML 파일을 '연도_월' 폴더 구조로 관리하는 방식을 채택합니다. 이는 보안성과 속도 면에서 압도적인 이점을 가집니다.</p>
+            `;
+            container.appendChild(intro);
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8';
+
+            // Left: Chart (Comparison)
+            const chartCol = document.createElement('div');
+            chartCol.className = 'bg-white p-6 rounded-lg shadow-sm';
+            chartCol.innerHTML = `
+                <h3 class="font-bold text-slate-800 mb-4">방식 비교: 기존 DB vs 제안(Static)</h3>
+                <div class="chart-container">
+                    <canvas id="archChart"></canvas>
+                </div>
+                <p class="text-xs text-center text-slate-400 mt-4">* 점수가 높을수록 우수함 (비용/복잡도는 낮을수록 고득점 처리)</p>
+            `;
+            grid.appendChild(chartCol);
+
+            // Right: Interactive Folder Tree
+            const treeCol = document.createElement('div');
+            treeCol.className = 'bg-white p-6 rounded-lg shadow-sm';
+            treeCol.innerHTML = `
+                <h3 class="font-bold text-slate-800 mb-4">📂 제안된 폴더 구조 (시뮬레이션)</h3>
+                <div class="bg-slate-50 p-4 rounded border border-slate-200 font-mono text-sm h-[350px] overflow-y-auto">
+                    <ul id="folder-tree">
+                        <!-- Tree will be generated here -->
+                    </ul>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">💡 폴더를 클릭하여 하위 구조를 확인하세요.</p>
+            `;
+            grid.appendChild(treeCol);
+            container.appendChild(grid);
+
+            // Init Chart
+            setTimeout(() => {
+                const ctx = document.getElementById('archChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['유지보수 용이성', '로딩 속도', '보안성', '구축 비용(저렴함)'],
+                        datasets: [
+                            {
+                                label: '기존 DB/CMS 방식',
+                                data: [40, 60, 50, 30],
+                                backgroundColor: '#94a3b8'
+                            },
+                            {
+                                label: '제안: 정적 파일 방식',
+                                data: [90, 95, 100, 90],
+                                backgroundColor: '#2563eb'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, max: 100 } }
+                    }
+                });
+                
+                // Init Tree
+                initTree();
+            }, 0);
+        }
+
+        function initTree() {
+            const treeData = {
+                name: "Root (Webzine Main)",
+                type: "folder",
+                open: true,
+                children: [
+                    { name: "index.html (통합 뷰어)", type: "file" },
+                    { name: "assets", type: "folder", children: [
+                        { name: "logo.png", type: "file" },
+                        { name: "style.css", type: "file" }
+                    ]},
+                    { name: "2026_01", type: "folder", children: [
+                        { name: "index.html (1월호 본문)", type: "file" },
+                        { name: "images", type: "folder", children: [{name: "cover.jpg", type: "file"}]}
+                    ]},
+                    { name: "2026_02", type: "folder", children: [
+                        { name: "index.html (2월호 본문)", type: "file" }
+                    ]},
+                    { name: "...", type: "folder", children: []}
+                ]
+            };
+            
+            const treeContainer = document.getElementById('folder-tree');
+            treeContainer.appendChild(createTreeElement(treeData));
+        }
+
+        function createTreeElement(node) {
+            const li = document.createElement('li');
+            li.className = 'mb-1';
+            
+            const label = document.createElement('span');
+            label.className = `tree-item ${node.type === 'folder' ? (node.open ? 'folder-open' : 'folder-icon') : 'file-icon'}`;
+            label.textContent = node.name;
+            
+            li.appendChild(label);
+
+            if (node.children) {
+                const ul = document.createElement('ul');
+                ul.className = `nested ${node.open ? 'active' : ''}`;
+                node.children.forEach(child => ul.appendChild(createTreeElement(child)));
+                li.appendChild(ul);
+
+                label.addEventListener('click', () => {
+                    ul.classList.toggle('active');
+                    label.classList.toggle('folder-open');
+                    label.classList.toggle('folder-icon');
+                });
+            }
+            return li;
+        }
+
+        // --- 3. UX Strategy Section ---
+        function renderUXStrategy(container) {
+            const intro = document.createElement('div');
+            intro.innerHTML = `
+                <h2 class="text-2xl font-bold text-slate-900 mb-4">4. UI/UX 디자인 전략: 몰입형 인터페이스</h2>
+                <p class="text-slate-600 mb-8">
+                    콘텐츠 가독성을 위해 평소에는 메뉴를 숨기고(Hidden Menu), 필요 시에만 호출하는 
+                    Immersive View 방식을 도입했습니다.아래 인터렉티브 목업을 통해 실제 사용 시나리오를 보실수 있습니다.
+                </p>
+            `;
+            container.appendChild(intro);
+
+            // Mockup Container
+            const mockupArea = document.createElement('div');
+            mockupArea.className = 'flex justify-center bg-slate-200 p-8 rounded-xl';
+            
+            mockupArea.innerHTML = `
+                <div class="mockup-device bg-white w-[375px] h-[600px] rounded-[40px] border-8 border-slate-800 relative overflow-hidden flex flex-col">
+                    <!-- Notch -->
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-xl z-20"></div>
+                    
+                    <!-- App Header -->
+                    <div class="h-16 bg-white flex items-end justify-between px-4 pb-2 border-b z-10 relative">
+                        <button onclick="toggleMockupMenu()" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                            <span class="block w-5 h-0.5 bg-slate-900 mb-1"></span>
+                            <span class="block w-5 h-0.5 bg-slate-900 mb-1"></span>
+                            <span class="block w-3 h-0.5 bg-slate-900"></span>
+                        </button>
+                        <span class="font-black text-blue-600">UST21 뉴스</span>
+                        <div class="w-8"></div>
+                    </div>
+
+                    <!-- Side Menu (Hidden) -->
+                    <div id="mockup-menu" class="mockup-menu absolute top-0 left-0 w-64 h-full bg-slate-900 z-30 pt-20 px-6 text-white shadow-2xl">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Library</h3>
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-600 rounded-lg cursor-pointer">
+                                <div class="text-[10px] opacity-70">2026.02</div>
+                                <div class="font-bold">Vol.02 신규 입사자</div>
+                            </div>
+                            <div class="p-3 hover:bg-slate-800 rounded-lg cursor-pointer border border-slate-700">
+                                <div class="text-[10px] opacity-70">2026.01</div>
+                                <div class="font-bold">Vol.01 남극 리포트</div>
+                            </div>
+                        </div>
+                        <button onclick="toggleMockupMenu()" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+                    </div>
+
+                    <!-- App Content -->
+                    <div class="flex-1 overflow-y-auto bg-slate-50 p-4" onclick="closeMockupMenu()">
+                        <div class="h-48 bg-blue-100 rounded-xl mb-4 flex items-center justify-center text-blue-300 font-bold text-4xl">IMG</div>
+                        <h2 class="text-2xl font-black text-slate-900 mb-2 leading-tight">영하 25도 남극에서 온 펭귄의 편지</h2>
+                        <div class="flex gap-2 mb-4">
+                             <span class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">Tech</span>
+                             <span class="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded">Report</span>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                            안녕하세요, 여기는 남극 장보고 기지입니다. 극한의 환경에서도 데이터 수집은 멈추지 않습니다...
+                        </p>
+                        <div class="h-24 bg-slate-200 rounded-lg mb-2"></div>
+                        <div class="h-24 bg-slate-200 rounded-lg"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(mockupArea);
+        }
+
+        // Global function for mockup interaction
+        window.toggleMockupMenu = function() {
+            const menu = document.getElementById('mockup-menu');
+            menu.classList.toggle('open');
+        };
+        window.closeMockupMenu = function() {
+            const menu = document.getElementById('mockup-menu');
+            if(menu.classList.contains('open')) menu.classList.remove('open');
+        }
+
+        // --- 4. Workflow Section ---
+        function renderWorkflow(container) {
+            const intro = document.createElement('div');
+            intro.innerHTML = `
+                <h2 class="text-2xl font-bold text-slate-900 mb-4">5. 운용 및 유지보수 프로세스</h2>
+                <p class="text-slate-600 mb-8">매월 신규 호 발행 시, 단 3단계의 단순 작업만으로 아카이빙이 완료됩니다. 월 소요 시간은 약 10분 내외입니다.</p>
+            `;
+            container.appendChild(intro);
+
+            const flowContainer = document.createElement('div');
+            flowContainer.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+
+            reportData.workflow.forEach((step, index) => {
+                const stepCard = document.createElement('div');
+                stepCard.className = 'bg-white p-6 rounded-lg border border-slate-200 relative overflow-hidden group hover:border-blue-500 transition-colors cursor-default';
+                stepCard.innerHTML = `
+                    <div class="absolute top-0 right-0 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500 rounded-bl-lg group-hover:bg-blue-100 group-hover:text-blue-600">Step 0${step.step}</div>
+                    <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        ${step.step}
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">${step.title}</h3>
+                    <p class="text-sm text-slate-600 mb-4 h-10">${step.desc}</p>
+                    <div class="flex items-center text-xs font-medium text-slate-400">
+                        <span class="mr-2">⏱️ 소요시간:</span>
+                        <span class="text-slate-700">${step.time}</span>
+                    </div>
+                `;
+                flowContainer.appendChild(stepCard);
+            });
+            container.appendChild(flowContainer);
+            
+            // Additional Note
+            const note = document.createElement('div');
+            note.className = 'mt-6 bg-yellow-50 border border-yellow-200 p-4 rounded text-sm text-yellow-800 flex items-start gap-3';
+            note.innerHTML = `
+                <span class="text-xl">💡</span>
+                <p><strong>유지보수 Tip:</strong> 특정 호수 내용 수정 시에도 전체 사이트를 건드릴 필요 없이, 해당 월의 폴더 내 파일만 덮어쓰기하면 되므로 리스크 관리가 매우 용이합니다.</p>
+            `;
+            container.appendChild(note);
+        }
+
+        // --- 5. Benefits Section ---
+        function renderBenefits(container) {
+            const intro = document.createElement('div');
+            intro.innerHTML = `
+                <h2 class="text-2xl font-bold text-slate-900 mb-4">6. 기대 효과 및 결론</h2>
+                <p class="text-slate-600 mb-8">본 시스템 구축을 통해 예상되는 정량적, 정성적 효과 분석입니다.</p>
+            `;
+            container.appendChild(intro);
+
+            const layout = document.createElement('div');
+            layout.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-center';
+
+            // Chart
+            const chartBox = document.createElement('div');
+            chartBox.className = 'bg-white p-6 rounded-lg shadow-sm';
+            chartBox.innerHTML = `
+                <div class="chart-container">
+                    <canvas id="benefitChart"></canvas>
+                </div>
+            `;
+            layout.appendChild(chartBox);
+
+            // Text Summary
+            const summaryBox = document.createElement('div');
+            summaryBox.className = 'space-y-6';
+            summaryBox.innerHTML = `
+                <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-600">
+                    <h3 class="font-bold text-blue-900 mb-2">🚀 브랜딩 강화</h3>
+                    <p class="text-sm text-blue-700">최신 웹 트렌드가 반영된 세련된 페이지를 통해 UST21의 '스마트 기술 기업' 이미지를 제고합니다.</p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-slate-400">
+                    <h3 class="font-bold text-slate-900 mb-2">📚 히스토리 자산화</h3>
+                    <p class="text-sm text-slate-600">신규 입사자 교육 자료 및 대외 홍보용 포트폴리오로 즉시 활용 가능한 아카이브가 구축됩니다.</p>
+                </div>
+                <div class="p-4 border border-slate-200 rounded-lg bg-white">
+                    <h4 class="font-bold text-slate-900 mb-2">결론 (Conclusion)</h4>
+                    <p class="text-sm text-slate-600">
+                        현행 리소스 내에서 <strong>추가 비용 없이 즉시 구축 가능</strong>하며, 
+                        향후 5년 이상 데이터가 축적되어도 속도 저하가 없는 가장 합리적인 방식입니다. 
+                        승인 시 즉시 템플릿 적용 및 데이터 마이그레이션을 진행하고자 합니다.
+                    </p>
+                </div>
+            `;
+            layout.appendChild(summaryBox);
+            container.appendChild(layout);
+
+            // Init Radar Chart
+            setTimeout(() => {
+                const ctx = document.getElementById('benefitChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['비용 절감', '데이터 보존성', '사용자 경험', '운영 편의성', '보안성'],
+                        datasets: [{
+                            label: '기대 효과 점수 (5점 만점)',
+                            data: [5, 4.8, 4.5, 5, 5],
+                            fill: true,
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            pointBackgroundColor: 'rgb(37, 99, 235)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(37, 99, 235)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: { display: false },
+                                suggestedMin: 0,
+                                suggestedMax: 5
+                            }
+                        }
+                    }
+                });
+            }, 0);
+        }
+
+    </script>
+</body>
+</html>
